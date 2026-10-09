@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MedTrack – Medicine Reminder & Health Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--t:#0f9d9a;--td:#0b6f6d;--b:#2b7bd6;--g:#3fae6a;--r:#d9534f;--o:#e69a2e;--ink:#17323a;--mu:#5d7479;--ln:#dce9ea;--bg:#f4fafa}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 "Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+.side{position:fixed;inset:0 auto 0 0;width:230px;background:#fff;border-right:1px solid var(--ln);padding:18px 12px;overflow:auto;z-index:20;transition:transform .2s}
+.logo{font-size:22px;font-weight:700;color:var(--td);padding:0 10px}.tag{font-size:12px;color:var(--mu);padding:2px 10px 16px}
+.side a{display:block;padding:10px 12px;border-radius:10px;color:var(--ink);text-decoration:none;margin-bottom:2px}
+.side a:hover{background:var(--bg)}.side a.on{background:var(--t);color:#fff}
+.top{display:none;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--ln);padding:10px 14px;z-index:15;align-items:center;gap:10px}
+main{margin-left:230px;padding:24px;max-width:1100px}
+h1{margin:0 0 4px;font-size:26px}h2{margin:0 0 10px;font-size:17px}.sub{color:var(--mu);margin:0 0 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:14px}
+.card{background:#fff;border:1px solid var(--ln);border-radius:16px;padding:16px;box-shadow:0 2px 8px rgba(15,157,154,.07)}
+.big{font-size:28px;font-weight:700}.mu{color:var(--mu);font-size:13px}
+.bar{height:9px;background:#e4efef;border-radius:9px;overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--t);border-radius:9px}
+.btn{border:0;background:var(--t);color:#fff;padding:8px 14px;border-radius:10px;cursor:pointer}.btn:hover{background:var(--td)}.btn:disabled{opacity:.5}
+.btn.s{background:#e8f3f3;color:var(--td)}.btn.d{background:#fdeceb;color:var(--r)}.btn.sm{padding:4px 10px;font-size:13px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--ln);border-radius:10px;background:#fff}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0 3px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}
+.dose{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--ln)}.dose:last-child{border:0}
+.pill{font-size:12px;padding:2px 9px;border-radius:20px;background:#e8f3f3;color:var(--td)}
+.pill.taken{background:#e3f5ea;color:#217a45}.pill.overdue,.pill.missed{background:#fdeceb;color:var(--r)}.pill.skipped{background:#fff3df;color:#9a6200}
+.empty{text-align:center;color:var(--mu);padding:20px 8px}.err{color:var(--r);font-size:13px;margin-top:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{text-align:left;padding:6px 8px;border-bottom:1px solid var(--ln)}
+.chart{position:relative;height:200px}
+#toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+#toast div{background:var(--td);color:#fff;padding:10px 14px;border-radius:10px}#toast .err{background:var(--r);color:#fff;margin:0}
+@media(max-width:800px){.side{transform:translateX(-100%)}.side.open{transform:none;box-shadow:0 0 30px rgba(0,0,0,.2)}.top{display:flex}main{margin:0;padding:16px}}
+body{background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
+h1{font-size:32px;font-weight:700;letter-spacing:-.5px}.card{border:0;border-radius:20px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.btn{border-radius:999px}.btn.sm{padding:5px 13px}.btn.w{background:#32ade6}.btn.w:hover{background:#1f95cc}
+input,select,textarea{border:0;background:#f2f2f7;border-radius:12px}.side{background:rgba(255,255,255,.88);backdrop-filter:blur(20px)}
+.rc{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center}.rc b{font-size:20px}
+.tabs{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.9);backdrop-filter:blur(20px);border-top:1px solid #d8d8dc;justify-content:space-around;padding:6px 0 calc(6px + env(safe-area-inset-bottom));z-index:30}
+.tabs a,.tabs button{display:flex;flex-direction:column;align-items:center;font-size:11px;color:var(--mu);text-decoration:none;background:none;border:0;cursor:pointer;min-width:56px}.tabs span{font-size:22px}.tabs .on{color:var(--t)}
+@media(max-width:800px){.tabs{display:flex}main{padding-bottom:96px}.top{display:none}}
+</style></head><body>
+<nav class="side" id="side"><div class="logo">💊 MedTrack</div><div class="tag">Your Health, Your Routine, Your Reminder.</div></nav>
+<div class="top"><button class="btn s" data-a="menu" aria-label="Menu">☰</button><b style="color:var(--td)">MedTrack</b></div>
+<nav class="tabs"><a href="#dashboard" data-k="dashboard"><span>📊</span>Summary</a><a href="#meds" data-k="meds"><span>💊</span>Meds</a><a href="#water" data-k="water"><span>💧</span>Water</a><a href="#health" data-k="health"><span>❤️</span>Health</a><button data-a="menu"><span>☰</span>More</button></nav>
+<main id="view"></main><div id="toast" aria-live="polite"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0'),ymd=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`,today=()=>ymd(new Date());
+const nowT=()=>{const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())};
+const addDays=(s,n)=>{const d=new Date(s+'T00:00');d.setDate(d.getDate()+n);return ymd(d)};
+const diff=(a,b)=>Math.round((new Date(b+'T00:00')-new Date(a+'T00:00'))/864e5);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6),sum=a=>a.reduce((x,y)=>x+y,0),pct=(a,b)=>b>0?Math.min(100,Math.round(a/b*100)):0;
+const byDate=(a,b)=>a.date<b.date?-1:a.date>b.date?1:0,latest=a=>[...a].sort(byDate).at(-1),byTime=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
+const KEY='medtrack.v1',D0={meds:[],doses:[],water:[],steps:{},weights:[],bmi:[],logs:[],settings:{waterGoal:2000,stepGoal:8000,notify:false,lead:0,height:''}};
+function norm(r){const d=structuredClone(D0);for(const k of['meds','doses','water','weights','bmi','logs'])if(Array.isArray(r[k]))d[k]=r[k].filter(x=>x&&typeof x==='object');
+ if(r.steps&&typeof r.steps==='object'&&!Array.isArray(r.steps))for(const[k,v]of Object.entries(r.steps))if(/^\d{4}-\d\d-\d\d$/.test(k)&&Number.isFinite(+v)&&+v>=0)d.steps[k]=+v;
+ if(r.settings&&typeof r.settings==='object')for(const k in d.settings)if(k in r.settings)d.settings[k]=r.settings[k];
+ d.meds=d.meds.filter(m=>m.id&&m.name&&Array.isArray(m.times)&&/^\d{4}-\d\d-\d\d$/.test(m.start));d.doses=d.doses.filter(x=>x.id&&/^\d{4}-\d\d-\d\d$/.test(x.date)&&/^\d\d:\d\d$/.test(x.time));
+ d.water=d.water.filter(x=>x.date&&+x.ml>0);d.weights=d.weights.filter(x=>x.date&&+x.kg>0);d.bmi=d.bmi.filter(x=>x.date&&+x.bmi>0);return d}
+function load(){try{const r=JSON.parse(localStorage.getItem(KEY));return r&&typeof r==='object'?norm(r):structuredClone(D0)}catch(e){return structuredClone(D0)}}
+let S=load();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Could not save: browser storage is full or blocked.',1)}}
+function toast(m,e){const t=document.createElement('div');t.textContent=m;if(e)t.className='err';$('#toast').append(t);setTimeout(()=>t.remove(),3200)}
+const FREQ={daily:1,alternate:2,weekly:7};
+const applies=(m,d)=>d>=m.start&&(!m.end||d<=m.end)&&diff(m.start,d)%(FREQ[m.freq]||1)===0;
+function sync(){const t=today();let ch=0;for(const m of S.meds){let f=addDays(t,-60);if(m.start>f)f=m.start;if(m.genFrom&&m.genFrom>f)f=m.genFrom;
+ for(let d=f;d<=t;d=addDays(d,1))if(applies(m,d))for(const tm of m.times)if(!S.doses.some(x=>x.medId===m.id&&x.date===d&&x.time===tm)){S.doses.push({id:uid(),medId:m.id,name:m.name,dosage:m.dosage,date:d,time:tm,status:'pending'});ch=1}}
+ if(ch)save()}
+function state(x){if(x.status!=='pending')return x.status;if(x.date<today())return'missed';return x.date===today()&&x.time<nowT()?'overdue':'upcoming'}
+const waterOn=d=>sum(S.water.filter(x=>x.date===d).map(x=>+x.ml)),days7=()=>Array.from({length:7},(_,i)=>addDays(today(),i-6));
+const ch={};function mk(id,type,labels,sets){const c=document.getElementById(id);if(!c||!window.Chart)return;ch[id]?.destroy();ch[id]=new Chart(c,{type,data:{labels,datasets:sets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:sets.length>1}}}})}
+const bar=(v,g,c)=>`<div class="bar"><i style="width:${pct(v,g)}%;${c?'background:'+c:''}"></i></div>`;
+const empty=m=>`<div class="empty">${m}</div>`;
+function doseRow(x,act=1){const s=state(x);return`<div class="dose"><div><b>${esc(x.time)}</b> · ${esc(x.name)} <span class="mu">${esc(x.dosage)}</span> <span class="pill ${s}">${s}</span></div>${act?`<div class="row">${x.status==='pending'?`<button class="btn sm" data-a="take" data-id="${x.id}">Mark as taken</button><button class="btn sm s" data-a="skip" data-id="${x.id}">Skip</button>`:`<button class="btn sm s" data-a="undo" data-id="${x.id}">Undo</button>`}</div>`:''}</div>`}
+const rings=(a,sz=150,w=12)=>{const c=sz/2;return`<svg viewBox="0 0 ${sz} ${sz}" width="${sz}" height="${sz}" role="img">`+a.map((r,i)=>{const R=c-w-i*(w+3),L=2*Math.PI*R;return`<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${r.c}" stroke-opacity=".2" stroke-width="${w}"/>`+(r.p>0?`<circle cx="${c}" cy="${c}" r="${R}" fill="none" stroke="${r.c}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${L*r.p/100} ${L}" transform="rotate(-90 ${c} ${c})"/>`:'')}).join('')+'</svg>'};
+const P={};let editId=null,R=[];
+P.dashboard=()=>{const t=today(),ds=S.doses.filter(x=>x.date===t).sort(byTime),tk=ds.filter(x=>x.status==='taken').length,w=waterOn(t),st=S.steps[t]||0,b=latest(S.bmi),lw=latest(S.weights),up=ds.filter(x=>x.status==='pending');
+ const h=new Date().getHours(),gr=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+ R.push(()=>{mk('c1','bar',days7().map(d=>d.slice(5)),[{label:'Steps',data:days7().map(d=>S.steps[d]||0),backgroundColor:'#2b7bd6'}]);mk('c2','bar',days7().map(d=>d.slice(5)),[{label:'Water (ml)',data:days7().map(waterOn),backgroundColor:'#0f9d9a'}])});
+ return`<h1>${gr} 👋</h1><p class="sub">${new Date().toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</p>
+ <div class="card rc" style="margin-bottom:14px">${rings([{p:pct(tk,ds.length),c:'#34c759'},{p:pct(w,S.settings.waterGoal),c:'#32ade6'},{p:pct(st,S.settings.stepGoal),c:'#ff2d55'}],170)}<div><h2>Today's rings</h2><div style="color:#34c759"><b>Medicines</b> ${tk}/${ds.length}</div><div style="color:#32ade6"><b>Water</b> ${w}/${S.settings.waterGoal} ml</div><div style="color:#ff2d55"><b>Steps</b> ${st}/${S.settings.stepGoal}</div></div></div>
+ <div class="grid"><div class="card"><div class="mu">Today's medicines</div><div class="big">${tk}/${ds.length}</div>${bar(tk,ds.length,'var(--g)')}<div class="mu">${tk} taken · ${ds.length-tk} remaining</div></div>
+ <div class="card"><div class="mu">Water intake</div><div class="big">${w} ml</div>${bar(w,S.settings.waterGoal)}<div class="mu">Goal ${S.settings.waterGoal} ml (${pct(w,S.settings.waterGoal)}%)</div></div>
+ <div class="card"><div class="mu">Steps</div><div class="big">${st}</div>${bar(st,S.settings.stepGoal,'var(--b)')}<div class="mu">Goal ${S.settings.stepGoal} (${pct(st,S.settings.stepGoal)}%)</div></div>
+ <div class="card"><div class="mu">BMI / weight</div><div class="big">${b?(+b.bmi).toFixed(1):'–'}</div><div class="mu">${b?esc(b.cat):'No BMI saved yet'} · ${lw?lw.kg+' kg':'no weight yet'}</div></div></div>
+ <div class="card" style="margin-bottom:14px"><h2>Upcoming reminders</h2>${up.length?up.map(x=>doseRow(x)).join(''):empty(S.meds.length?'Nothing left to take today.':'No medicines yet. <a href="#add">Add your first medicine</a>.')}</div>
+ <div class="grid"><div class="card"><h2>Steps this week</h2><div class="chart"><canvas id="c1"></canvas></div></div><div class="card"><h2>Water this week</h2><div class="chart"><canvas id="c2"></canvas></div></div></div>`};
+P.meds=()=>{const t=today(),ds=S.doses.filter(x=>x.date===t).sort(byTime),od=ds.filter(x=>state(x)==='overdue');
+ return`<h1>Medicine reminders</h1><p class="sub">Today's schedule in time order.</p><div class="card" style="margin-bottom:14px"><div class="row" style="justify-content:space-between"><h2>Today</h2><a class="btn sm" href="#add" style="text-decoration:none">+ Add medicine</a></div>${od.length?`<p class="err">${od.length} overdue dose(s)</p>`:''}${ds.length?ds.map(x=>doseRow(x)).join(''):empty('No doses scheduled today.')}</div>
+ <div class="card"><h2>All medicines</h2>${S.meds.length?S.meds.map(m=>`<div class="dose"><div><b>${esc(m.name)}</b> <span class="mu">${esc(m.dosage)} · ${esc(m.type)} · ${esc(m.freq)} · ${esc(m.times.join(', '))} · ${esc(m.instr)}<br>${m.start}${m.end?' to '+m.end:' onwards'}</span></div><div class="row"><button class="btn sm s" data-a="editmed" data-id="${m.id}">Edit</button><button class="btn sm d" data-a="delmed" data-id="${m.id}">Delete</button></div></div>`).join(''):empty('No medicines saved yet.')}</div>`};
+P.add=()=>{const m=S.meds.find(x=>x.id===editId)||{name:'',dosage:'',type:'Tablet',freq:'daily',start:today(),end:'',times:['08:00'],instr:'As directed'};
+ const o=(a,v)=>a.map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('');
+ return`<h1>${editId?'Edit':'Add'} medicine</h1><p class="sub">Add one or more reminder times per day.</p><form class="card" data-f="med" style="max-width:560px" novalidate>
+ <label>Name</label><input name="name" value="${esc(m.name)}" maxlength="60"><label>Dosage (e.g. 500 mg)</label><input name="dosage" value="${esc(m.dosage)}" maxlength="40">
+ <label>Type</label><select name="type">${o(['Tablet','Capsule','Syrup','Injection','Drops','Other'],m.type)}</select>
+ <label>Frequency</label><select name="freq"><option value="daily"${m.freq==='daily'?' selected':''}>Every day</option><option value="alternate"${m.freq==='alternate'?' selected':''}>Every other day</option><option value="weekly"${m.freq==='weekly'?' selected':''}>Once a week</option></select>
+ <label>Instructions</label><select name="instr">${o(['Before food','After food','As directed'],m.instr)}</select>
+ <div class="row"><div><label>Start date</label><input type="date" name="start" value="${m.start}"></div><div><label>End date (optional)</label><input type="date" name="end" value="${m.end||''}"></div></div>
+ <label>Reminder times</label><div id="times">${m.times.map(t=>`<div class="row" style="margin-bottom:6px"><input type="time" name="time" value="${t}" style="width:140px"><button type="button" class="btn sm d" data-a="rmtime">Remove</button></div>`).join('')}</div>
+ <button type="button" class="btn sm s" data-a="addtime">+ Add time</button><div class="err" id="ferr"></div><div class="row" style="margin-top:14px"><button class="btn" type="submit">${editId?'Save changes':'Save medicine'}</button><a class="btn s" href="#meds" style="text-decoration:none" data-a="cancel">Cancel</a></div></form>`};
+P.water=()=>{const t=today(),w=waterOn(t),g=S.settings.waterGoal,ws=S.water.filter(x=>x.date===t).reverse(),d7=days7().map(waterOn),hit=d7.filter(v=>v>=g).length;
+ R.push(()=>mk('c5','bar',days7().map(d=>d.slice(5)),[{label:'ml',data:d7,backgroundColor:'#32ade6',borderRadius:6}]));
+ return`<h1>Water</h1><p class="sub">Goal ${g} ml a day. <a href="#settings">Change goal</a></p>
+ <div class="card" style="text-align:center;margin-bottom:14px"><div style="position:relative;width:220px;height:220px;margin:0 auto">${rings([{p:pct(w,g),c:'#32ade6'}],220,18)}<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center"><div class="big" style="color:#32ade6">${w} ml</div><div class="mu">${pct(w,g)}% · ${Math.max(0,g-w)} ml left</div></div></div>
+ ${w>=g?'<p style="color:#34c759"><b>Goal reached today 🎉</b></p>':''}<div class="row" style="justify-content:center;margin:14px 0">${[150,250,500].map(n=>`<button class="btn w" data-a="water" data-n="${n}">+${n} ml</button>`).join('')}<button class="btn s" data-a="waterundo">Undo last</button></div>
+ <form class="row" data-f="water" style="justify-content:center" novalidate><input name="ml" type="number" min="1" max="5000" placeholder="Custom ml" style="width:130px"><button class="btn s">Add</button></form></div>
+ <div class="grid"><div class="card"><h2>Today's entries</h2>${ws.length?ws.map(x=>`<div class="dose"><span><b>${x.ml} ml</b> <span class="mu">${esc(x.t)}</span></span><button class="btn sm d" data-a="wdel" data-id="${x.id}">Remove</button></div>`).join(''):empty('No water logged yet today. Tap a button above.')}</div>
+ <div class="card"><h2>Last 7 days</h2><div class="chart"><canvas id="c5"></canvas></div><p class="mu">Average ${Math.round(sum(d7)/7)} ml · goal met ${hit} of 7 days</p></div></div>`};
+P.health=()=>{const t=today(),w=waterOn(t),g=S.settings.waterGoal,st=S.steps[t]||0,sg=S.settings.stepGoal,ws=S.water.filter(x=>x.date===t),lg=S.logs.find(x=>x.date===t)||{},wts=[...S.weights].sort(byDate);
+ R.push(()=>mk('c3','line',wts.map(x=>x.date),[{label:'kg',data:wts.map(x=>+x.kg),borderColor:'#3fae6a',tension:.25}]));
+ return`<h1>Health tracker</h1><p class="sub">Everything is saved on this device.</p><div class="grid">
+ <div class="card"><h2>💧 Water</h2><div class="big">${w} ml</div>${bar(w,g)}<div class="mu">${pct(w,g)}% · ${Math.max(0,g-w)} ml remaining</div><div class="row" style="margin:10px 0">${[150,250,500].map(n=>`<button class="btn sm" data-a="water" data-n="${n}">+${n}</button>`).join('')}<button class="btn sm s" data-a="waterundo">Undo last</button></div>
+ <form class="row" data-f="water" novalidate><input name="ml" type="number" placeholder="Custom ml" min="1" max="5000" style="width:120px"><button class="btn sm s">Add</button></form>
+ ${ws.map(x=>`<div class="dose"><span>${x.ml} ml <span class="mu">${esc(x.t)}</span></span><button class="btn sm d" data-a="wdel" data-id="${x.id}">Remove</button></div>`).join('')}</div>
+ <div class="card"><h2>👟 Steps</h2><div class="big">${st}</div>${bar(st,sg,'var(--b)')}<div class="mu">${pct(st,sg)}% · ${Math.max(0,sg-st)} remaining. Entered manually.</div>
+ <form data-f="steps" novalidate><label>Date</label><input type="date" name="date" value="${t}" max="${t}"><label>Steps walked</label><input type="number" name="n" min="0" max="200000" value="${st||''}"><button class="btn" style="margin-top:10px">Save steps</button></form></div></div>
+ <div class="grid"><div class="card"><h2>⚖️ Weight</h2><form class="row" data-f="weight" novalidate><input type="date" name="date" value="${t}" max="${t}" style="width:150px"><input name="kg" type="number" step="0.1" placeholder="kg" style="width:100px"><button class="btn sm">Add</button></form>
+ <div class="chart" style="margin:10px 0"><canvas id="c3"></canvas></div>${wts.length?[...wts].reverse().slice(0,8).map(x=>`<div class="dose"><span>${x.date} · <b>${x.kg} kg</b></span><span class="row"><button class="btn sm s" data-a="wedit" data-id="${x.id}">Edit</button><button class="btn sm d" data-a="wtdel" data-id="${x.id}">Delete</button></span></div>`).join(''):empty('No weight entries yet.')}${wts.length>1?`<p class="mu">Change since first entry: ${(wts.at(-1).kg-wts[0].kg).toFixed(1)} kg</p>`:''}</div>
+ <div class="card"><h2>📝 Daily log</h2><form data-f="log" novalidate><label>Date</label><input type="date" name="date" value="${t}" max="${t}"><label>Sleep (hours)</label><input name="sleep" type="number" step="0.5" min="0" max="24" value="${lg.sleep??''}"><label>Mood</label><select name="mood">${['','😄 Great','🙂 Good','😐 Okay','😟 Low','😢 Bad'].map(m=>`<option${m===lg.mood?' selected':''}>${m}</option>`).join('')}</select><label>Symptoms / wellness (optional)</label><input name="sym" value="${esc(lg.sym)}"><label>Notes</label><textarea name="notes" rows="3">${esc(lg.notes)}</textarea><button class="btn" style="margin-top:10px">Save log</button></form></div></div>`};
+const cat=b=>b<18.5?'Underweight':b<25?'Normal weight':b<30?'Overweight':'Obese';
+P.bmi=()=>{const h=[...S.bmi].sort(byDate);R.push(()=>mk('c4','line',h.map(x=>x.date),[{label:'BMI',data:h.map(x=>+x.bmi),borderColor:'#2b7bd6',tension:.25}]));
+ return`<h1>BMI calculator</h1><p class="sub">BMI = weight (kg) ÷ height (m)²</p><div class="grid"><form class="card" data-f="bmi" novalidate><label>Height (cm)</label><input name="h" type="number" step="0.1" value="${esc(S.settings.height)}"><label>Weight (kg)</label><input name="w" type="number" step="0.1" value="${latest(S.weights)?.kg||''}"><div class="err" id="ferr"></div><button class="btn" style="margin-top:10px">Calculate and save</button><p class="mu" id="bres"></p><p class="mu">BMI is a screening measure and does not independently determine a person's health.</p></form>
+ <div class="card"><h2>History</h2><div class="chart"><canvas id="c4"></canvas></div></div></div><div class="card">${h.length?`<table><tr><th>Date</th><th>BMI</th><th>Category</th><th>Height</th><th>Weight</th><th></th></tr>${[...h].reverse().map(x=>`<tr><td>${x.date}</td><td>${(+x.bmi).toFixed(1)}</td><td>${esc(x.cat)}</td><td>${x.h} cm</td><td>${x.w} kg</td><td><button class="btn sm d" data-a="bdel" data-id="${x.id}">Delete</button></td></tr>`).join('')}</table>`:empty('No BMI calculations saved.')}</div>`};
+let hf='',ht='';
+P.history=()=>{const t=today();hf=hf||addDays(t,-29);ht=ht||t;const i=x=>x.date>=hf&&x.date<=ht,ds=S.doses.filter(i).sort(byTime).reverse(),c=s=>ds.filter(x=>state(x)===s).length,tk=c('taken'),dn=tk+c('skipped')+c('missed');
+ const wd={};S.water.filter(i).forEach(x=>wd[x.date]=(wd[x.date]||0)+ +x.ml);const T=(rows,hd)=>rows.length?`<table><tr>${hd.map(x=>`<th>${x}</th>`).join('')}</tr>${rows.map(r=>`<tr>${r.map(x=>`<td>${esc(x)}</td>`).join('')}</tr>`).join('')}</table>`:empty('No records in this range.');
+ return`<h1>Health history</h1><form class="row" data-f="range" style="margin-bottom:14px"><span class="mu">From</span><input type="date" name="f" value="${hf}" style="width:150px"><span class="mu">to</span><input type="date" name="t" value="${ht}" style="width:150px"><button class="btn sm">Apply</button></form>
+ <div class="card" style="margin-bottom:14px"><h2>Medicine doses</h2><p class="mu">Taken ${tk} · Skipped ${c('skipped')} · Missed ${c('missed')} · Adherence ${dn?pct(tk,dn)+'%':'–'}</p>${ds.length?ds.map(x=>`<div class="dose"><span>${x.date} ${x.time} · ${esc(x.name)} ${esc(x.dosage)}</span><span class="pill ${state(x)}">${state(x)}</span></div>`).join(''):empty('No doses in this range.')}</div>
+ <div class="grid"><div class="card"><h2>Water</h2>${T(Object.entries(wd).sort().reverse().map(([d,v])=>[d,v+' ml']),['Date','Total'])}</div><div class="card"><h2>Steps</h2>${T(Object.entries(S.steps).filter(([d])=>d>=hf&&d<=ht).sort().reverse().map(([d,v])=>[d,v]),['Date','Steps'])}</div>
+ <div class="card"><h2>Weight</h2>${T(S.weights.filter(i).sort(byDate).reverse().map(x=>[x.date,x.kg+' kg']),['Date','Weight'])}</div><div class="card"><h2>BMI</h2>${T(S.bmi.filter(i).sort(byDate).reverse().map(x=>[x.date,(+x.bmi).toFixed(1)+' '+x.cat]),['Date','BMI'])}</div></div>
+ <div class="card" style="margin-top:14px"><h2>Sleep, mood and notes</h2>${T(S.logs.filter(i).sort(byDate).reverse().map(x=>[x.date,x.sleep?x.sleep+' h':'–',x.mood||'–',[x.sym,x.notes].filter(Boolean).join(' | ')||'–']),['Date','Sleep','Mood','Notes'])}</div>`};
+P.settings=()=>{const s=S.settings,np=window.Notification?Notification.permission:'unsupported';
+ return`<h1>Settings</h1><div class="grid"><form class="card" data-f="settings" novalidate><h2>Goals and reminders</h2><label>Daily water goal (ml)</label><input name="wg" type="number" min="250" max="10000" value="${s.waterGoal}"><label>Daily step goal</label><input name="sg" type="number" min="100" max="100000" value="${s.stepGoal}">
+ <label>Notify me before the dose time (minutes)</label><select name="lead">${[0,5,10,15,30].map(n=>`<option value="${n}"${+s.lead===n?' selected':''}>${n?n+' min before':'At dose time'}</option>`).join('')}</select><div class="err" id="ferr"></div><button class="btn" style="margin-top:10px">Save settings</button></form>
+ <div class="card"><h2>Browser notifications</h2><p class="mu">Permission: <b>${np}</b>. Notifications fire only while MedTrack is open in a browser tab. Reminders cannot run when the page or browser is closed without a push backend.</p><button class="btn" data-a="notif">${s.notify&&np==='granted'?'Disable notifications':'Enable notifications'}</button></div>
+ <div class="card"><h2>Backup</h2><div class="row"><button class="btn s" data-a="expjson">Export JSON</button><button class="btn s" data-a="expcsv">Export CSV</button></div><label>Import JSON backup</label><input type="file" id="imp" accept=".json,application/json"><div class="mu">Importing replaces current data.</div></div>
+ <div class="card"><h2>Clear data</h2><p class="mu">Deletes all medicines, doses and health records from this browser.</p><button class="btn d" data-a="clear">Clear all data</button></div></div>`};
+P.about=()=>`<h1>About MedTrack</h1><p class="sub">Your Health, Your Routine, Your Reminder.</p><div class="card" style="max-width:680px"><p>MedTrack keeps your medicine schedule and daily health numbers in one place. All data stays in this browser's LocalStorage; nothing is uploaded.</p><p><b>Limits:</b> steps are entered by hand (no sensor). Notifications work only while the page is open. BMI is a screening measure, not a diagnosis. MedTrack does not replace medical advice.</p></div>`;
+const NAV=[['dashboard','Dashboard'],['meds','Medicine Reminders'],['water','Water'],['add','Add Medicine'],['health','Health Tracker'],['bmi','BMI Calculator'],['history','Health History'],['settings','Settings'],['about','About MedTrack']];
+$('#side').insertAdjacentHTML('beforeend',NAV.map(([k,v])=>`<a href="#${k}" data-k="${k}">${v}</a>`).join(''));
+function render(){sync();const k=location.hash.slice(1);const p=P[k]?k:'dashboard';if(p!=='add'&&p!==rp)editId=null;rp=p;R=[];$('#view').innerHTML=P[p]();R.forEach(f=>f());document.querySelectorAll('a[data-k]').forEach(a=>a.classList.toggle('on',a.dataset.k===p));$('#side').classList.remove('open')}
+let rp='';window.addEventListener('hashchange',render);
+const doseSet=(id,s)=>{const x=S.doses.find(d=>d.id===id);if(x){x.status=s;save();render()}};
+function dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+const A={menu:()=>$('#side').classList.toggle('open'),take:e=>{doseSet(e.dataset.id,'taken');toast('Dose marked as taken.')},skip:e=>{doseSet(e.dataset.id,'skipped');toast('Dose skipped.')},undo:e=>doseSet(e.dataset.id,'pending'),
+ editmed:e=>{editId=e.dataset.id;location.hash='add';if(rp==='add')render()},cancel:()=>{editId=null},
+ delmed:e=>{if(!confirm('Delete this medicine and its upcoming doses? Past taken/skipped records are kept.'))return;S.meds=S.meds.filter(m=>m.id!==e.dataset.id);S.doses=S.doses.filter(x=>x.medId!==e.dataset.id||x.status!=='pending'||x.date<today());save();render();toast('Medicine deleted.')},
+ addtime:()=>$('#times').insertAdjacentHTML('beforeend','<div class="row" style="margin-bottom:6px"><input type="time" name="time" value="12:00" style="width:140px"><button type="button" class="btn sm d" data-a="rmtime">Remove</button></div>'),
+ rmtime:e=>{if(document.querySelectorAll('#times .row').length>1)e.closest('.row').remove()},
+ water:e=>addWater(+e.dataset.n),waterundo:()=>{const l=S.water.filter(x=>x.date===today()).at(-1);if(!l)return toast('Nothing to undo.',1);S.water=S.water.filter(x=>x!==l);save();render()},
+ wdel:e=>{S.water=S.water.filter(x=>x.id!==e.dataset.id);save();render()},wtdel:e=>{if(confirm('Delete this weight entry?')){S.weights=S.weights.filter(x=>x.id!==e.dataset.id);save();render()}},
+ wedit:e=>{const x=S.weights.find(w=>w.id===e.dataset.id),v=parseFloat(prompt('New weight in kg',x.kg));if(!(v>=20&&v<=500))return v===v&&toast('Enter a weight between 20 and 500 kg.',1);x.kg=v;save();render()},
+ bdel:e=>{S.bmi=S.bmi.filter(x=>x.id!==e.dataset.id);save();render()},
+ notif:async()=>{if(!window.Notification)return toast('This browser does not support notifications.',1);if(S.settings.notify&&Notification.permission==='granted'){S.settings.notify=false;save();return render()}
+  const p=await Notification.requestPermission();S.settings.notify=p==='granted';save();render();toast(p==='granted'?'Notifications enabled.':'Permission was not granted. Allow notifications in your browser site settings.',p!=='granted')},
+ expjson:()=>dl('medtrack-backup.json',JSON.stringify(S,null,2),'application/json'),
+ expcsv:()=>{const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"',r=[['type','date','time','name','value','status']];S.doses.forEach(x=>r.push(['dose',x.date,x.time,x.name,x.dosage,state(x)]));S.water.forEach(x=>r.push(['water',x.date,x.t,'','ml '+x.ml,'']));Object.entries(S.steps).forEach(([d,v])=>r.push(['steps',d,'','',v,'']));S.weights.forEach(x=>r.push(['weight',x.date,'','','kg '+x.kg,'']));S.bmi.forEach(x=>r.push(['bmi',x.date,'','',x.bmi,x.cat]));S.logs.forEach(x=>r.push(['log',x.date,'','',`sleep ${x.sleep||''} ${x.mood||''} ${x.sym||''} ${x.notes||''}`,'']));dl('medtrack-records.csv',r.map(a=>a.map(q).join(',')).join('\n'),'text/csv')},
+ clear:()=>{if(confirm('Delete ALL MedTrack data? This cannot be undone.')&&confirm('Really delete everything?')){S=structuredClone(D0);localStorage.removeItem(KEY);localStorage.removeItem('medtrack.notified');render();toast('All data cleared.')}}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(b&&A[b.dataset.a])A[b.dataset.a](b)});
+function addWater(n){if(!(n>0&&n<=5000))return toast('Enter an amount between 1 and 5000 ml.',1);S.water.push({id:uid(),date:today(),ml:Math.round(n),t:nowT()});save();render();toast(`Added ${Math.round(n)} ml.`)}
+const ferr=m=>{const e=$('#ferr');if(e)e.textContent=m;return false};let busy=false;
+const F={med(f){const v=Object.fromEntries(new FormData(f)),times=[...new Set([...f.querySelectorAll('[name=time]')].map(i=>i.value).filter(Boolean))].sort();
+  if(!v.name.trim())return ferr('Enter the medicine name.');if(!v.dosage.trim())return ferr('Enter the dosage.');if(!times.length)return ferr('Add at least one reminder time.');if(!v.start)return ferr('Choose a start date.');if(v.end&&v.end<v.start)return ferr('End date cannot be before the start date.');
+  const m={name:v.name.trim(),dosage:v.dosage.trim(),type:v.type,freq:v.freq,instr:v.instr,start:v.start,end:v.end,times};
+  if(editId){const o=S.meds.find(x=>x.id===editId);Object.assign(o,m,{genFrom:today()});S.doses=S.doses.filter(x=>x.medId!==editId||x.status!=='pending'||x.date<today());S.doses.forEach(x=>{if(x.medId===editId){x.name=m.name;x.dosage=m.dosage}})}
+  else if(S.meds.some(x=>x.name.toLowerCase()===m.name.toLowerCase()&&x.dosage===m.dosage&&x.times.join()===times.join()&&x.start===m.start))return ferr('This medicine with the same times already exists.');
+  else S.meds.push({id:uid(),...m});
+  save();toast(editId?'Medicine updated.':'Medicine added.');editId=null;location.hash='meds'},
+ water(f){addWater(parseFloat(new FormData(f).get('ml')))},
+ steps(f){const v=new FormData(f),n=parseInt(v.get('n'),10),d=v.get('date');if(!(n>=0&&n<=200000)||!d||d>today())return toast('Enter a valid date and a step count from 0 to 200,000.',1);S.steps[d]=n;save();render();toast('Steps saved.')},
+ weight(f){const v=new FormData(f),kg=parseFloat(v.get('kg')),d=v.get('date');if(!(kg>=20&&kg<=500)||!d||d>today())return toast('Enter a valid date and a weight between 20 and 500 kg.',1);const o=S.weights.find(x=>x.date===d);o?o.kg=kg:S.weights.push({id:uid(),date:d,kg});save();render();toast('Weight saved.')},
+ log(f){const v=Object.fromEntries(new FormData(f)),s=v.sleep===''?'':parseFloat(v.sleep);if(!v.date||v.date>today()||(s!==''&&!(s>=0&&s<=24)))return toast('Enter a valid date and sleep between 0 and 24 hours.',1);if(s===''&&!v.mood&&!v.notes.trim()&&!v.sym.trim())return toast('Fill in at least one field.',1);
+  const e={date:v.date,sleep:s,mood:v.mood,sym:v.sym.trim(),notes:v.notes.trim()},o=S.logs.find(x=>x.date===v.date);o?Object.assign(o,e):S.logs.push({id:uid(),...e});save();render();toast('Log saved.')},
+ bmi(f){const v=new FormData(f),h=parseFloat(v.get('h')),w=parseFloat(v.get('w'));if(!(h>=50&&h<=272))return ferr('Height must be between 50 and 272 cm.');if(!(w>=20&&w<=500))return ferr('Weight must be between 20 and 500 kg.');
+  const b=w/((h/100)**2),c=cat(b),d=today(),o=S.bmi.find(x=>x.date===d),e={date:d,bmi:+b.toFixed(2),cat:c,h,w};o?Object.assign(o,e):S.bmi.push({id:uid(),...e});const wo=S.weights.find(x=>x.date===d);wo?wo.kg=w:S.weights.push({id:uid(),date:d,kg:w});S.settings.height=h;save();render();$('#bres').innerHTML=`<b>BMI ${b.toFixed(1)} · ${c}</b>`;toast('BMI saved.')},
+ range(f){const v=new FormData(f);if(!v.get('f')||!v.get('t')||v.get('f')>v.get('t'))return toast('Choose a valid date range.',1);hf=v.get('f');ht=v.get('t');render()},
+ settings(f){const v=new FormData(f),wg=parseInt(v.get('wg'),10),sg=parseInt(v.get('sg'),10);if(!(wg>=250&&wg<=10000))return ferr('Water goal must be 250 to 10,000 ml.');if(!(sg>=100&&sg<=100000))return ferr('Step goal must be 100 to 100,000.');Object.assign(S.settings,{waterGoal:wg,stepGoal:sg,lead:+v.get('lead')});save();render();toast('Settings saved.')}};
+document.addEventListener('submit',e=>{const f=e.target.closest('[data-f]');if(!f)return;e.preventDefault();if(busy)return;busy=true;try{F[f.dataset.f](f)}finally{setTimeout(()=>busy=false,400)}});
+document.addEventListener('change',e=>{if(e.target.id!=='imp'||!e.target.files[0])return;const r=new FileReader();r.onload=()=>{try{const j=JSON.parse(r.result);if(!j||typeof j!=='object'||!['meds','doses','water','steps','weights'].some(k=>k in j))throw 0;if(!confirm('Replace current data with this backup?'))return;S=norm(j);save();render();toast('Backup imported.')}catch(x){toast('Invalid backup file.',1)}};r.readAsText(e.target.files[0])});
+function notify(){if(!S.settings.notify||!window.Notification||Notification.permission!=='granted')return;let seen;try{seen=JSON.parse(localStorage.getItem('medtrack.notified')||'{}')}catch(e){seen={}}const t=today(),lead=+S.settings.lead||0,n=new Date(Date.now()+lead*6e4),lim=pad(n.getHours())+':'+pad(n.getMinutes());let ch=0;
+ for(const x of S.doses)if(x.date===t&&x.status==='pending'&&x.time<=lim&&!seen[x.id]){new Notification('Time for '+x.name,{body:`${x.dosage} at ${x.time}`,tag:x.id});seen[x.id]=1;ch=1}
+ if(ch)try{localStorage.setItem('medtrack.notified',JSON.stringify(seen))}catch(e){}}
+setInterval(()=>{notify();if(today()!==cur){cur=today();render()}else if(rp==='dashboard'||rp==='meds')render()},30000);let cur=today();notify();render();
+</script></body></html>
